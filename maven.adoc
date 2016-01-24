@@ -1,0 +1,174 @@
+= Travaux pratiques - Maven
+Nicolas Frankel
+:doctype: article
+:encoding: utf-8
+:lang: fr
+:toc:
+:toc-placement!:
+:numbered:
+:experimental:
+:sectanchors:
+
+image::https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png[Licence Creative Commons, link="http://creativecommons.org/licenses/by-nc-sa/4.0/"]
+
+Ce cours est mis à disposition selon les termes de la http://creativecommons.org/licenses/by-nc-sa/4.0/[Licence Creative Commons Attribution - Pas d’Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0 International].
+
+toc::[]
+
+== Références
+
+* https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html#Lifecycle_Reference[Lifecycle Reference]
+* http://maven-guide-fr.erwan-alliaume.com/maven-guide-fr/site/reference/public-book.html[Maven, le guide final]
+
+== Introduction
+
+Cette section permet de migrer son projet pour le rendre compatible avec le standard Maven.
+
+La première étape consiste à répartir les sources du projet existant dans la structure Maven standard:
+
+* `src/main/java` pour le code Java "de production" qui doit être compilé
+* `src/main/resources` pour les autres fichiers "de production"
+* `src/test/java` pour le code Java de test
+* `src/test/resources` pour les autres fichiers de test
+
+La second étape consiste à créer un fichier _Project Object Model_ nommé `pom.xml` et situé à la racine du projet.
+
+Le squelette du `pom.xml` doit avoir la structure suivante:
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+   <groupId>ch.hesge.integrationcontinue</groupId>
+   <artifactId>monprojet</artifactId>
+   <version>0.0.1-SNAPSHOT</version>
+</project>
+----
+
+Il est bien sûr nécessaire de modifier les informations de `groupId` et d'`artifactId` pour être spécifiques à votre projet.
+
+== Configurer le proxy
+
+Dans la plupart des cas, la station de travail (ou le serveur) ne peuvent pas accéder à Internet directement mais uniquement via l'utilisation d'un serveur proxy.
+
+Pour ce faire, il est nécessaire de créer un fichier `settings.xml` dans votre _home_.
+
+[NOTE]
+====
+Le _home_ dépend du type et de la version du système d'exploitation. Il peut être recherché sur le web, ou bien récupéré depuis la propriété Java `user.home` :
+[source,java]
+----
+System.getProperty("user.home");
+----
+====
+
+Le fichier de _settings_ doit reproduire le modèle suivant :
+
+[source,java]
+----
+<settings xmlns="http://maven.apache.org/SETTINGS/1.1.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.1.0
+    http://maven.apache.org/xsd/settings-1.1.0.xsd">
+  <proxies>
+    <proxy>
+      <id>heg</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <username>identifiant</username>
+      <password>motdepasse</password>
+      <port>proxyhes.etat-ge.ch</port>
+      <host>80</host>
+    </proxy>
+  </proxies>
+</settings>
+----
+
+Si tout a été correctement réalisé, il est maintenant possible de construire votre projet à l'aide de la commande `mvn package`.
+
+Vérifier l'existence d'un JAR dans le répertoire `target` à la racine du projet.
+
+== Gérer les plugins
+
+=== Configurer un plugin
+
+Cette section a pour objectif d'expérimenter avec la configuration des plugins afin de rendre son _jar_ exécutable. Un tel jar peut être lancé via la commande suivante (ou en double-cliquant dessus pour les systèmes graphiques) :
+
+[source, bash]
+----
+java -jar monjar.jar
+----
+
+Pour parvenir à ce résultat, un _jar_ doit remplir deux conditions :
+
+* Disposer d'un fichier de manifeste standard `META-INF/MANIFEST.MF` dont une entrée référence une classe spécifique :
++
+[source]
+----
+Main-Class: ch.hesge.monprojet.MaClasse
+----
+
+* Cette classe référencée doit contenir une méthode dont la signature est exactement `public static void main(String... args)`. Cette méthode est le point d'entrée du _jar_ et sera exécutée lors du lancement.
+
+La création du manifeste rentre exactement dans le cadre du processus d'automatisation de la construction. Le plugin considéré est le Maven JAR plugin. A l'aide de la  https://maven.apache.org/shared/maven-archiver/examples/classpath.html#Make[documentation], configurer votre projet pour rendre le JAR exécutable.
+
+NOTE: Ne pas oublier de configurer explicitement la version du plugin. Si aucune version n'est indiquée, Maven utilisera la dernière version disponible et pourra donc changer de version au cours du cycle de vie du projet - ce qui représente un risque important pour la stabilité du _build_.
+
+=== Lier un nouveau plugin
+
+Le plugin https://github.com/ktoso/maven-git-commit-id-plugin[git-commit-id-plugin] permet de créer un fichier contenant des informations sur l'état du dépôt Git local.
+
+Lire attentivement la documentation du plugin puis faire en sorte que chaque exécution `mvn prepare-package` crée un fichier `git.properties` contenant les informations demandées à la racine du répertoire `target/classes`.
+
+== Gérer les dépendances
+
+Cette section a pour objectif d'apprendre à manipuler la configuration des dépendances.
+
+=== Ajouter une dépendance simple
+
+Consulter la https://github.com/akullpp/awesome-java[liste] des librairies Java utiles. L'utiliser dans votre projet en concertation avec l'enseignant. Par exemple :
+
+* Gérer les dates avec http://www.joda.org/joda-time[joda-time]
+* Utiliser une des nombreuses fonctionnalités de https://github.com/google/guava[Guava]
+* Offrir une interface REST très simple avec http://sparkjava.com/[Spark]
+* etc.
+
+=== Ajouter une dépendance de test
+
+Pour préparer le cours suivant, ajouter la dépendance envers la dernière version de http://testng.org/[TestNG]. Les coordonées Maven de cette librairie sont `org.testng:testng`.
+
+[WARNING]
+====
+Ne pas oublier de configurer la porté adaptée.
+====
+
+=== Ajouter une dépendance d'exécution
+
+Il existe une grande quantité de librairies de logs dans l'écosystème Java _p.e._ https://commons.apache.org/proper/commons-logging[Apache Commons Logging], https://logging.apache.org/log4j[Log4J] sans oublier le package `java.util.logging` du JDK.
+
+Parmi toutes ces options, la solution http://www.slf4j.org[SLF4J] est particulièrement intéressante car elle offre une séparation claire entre l'API et les différentes implémentations disponibles.
+
+image::http://www.slf4j.org/images/concrete-bindings.png[Principe de fonctionnement]
+
+1. Ajouter l'API SLF4J - `org.slf4j:slf4j-api`, comme dépendance simple
+1. Ajouter quelques logs à l'application, _p.e._ :
++
+
+[source, java]
+----
+Logger logger = LoggerFactory.getLogger(MaClass.class);
+logger.info("Ecrire quelque chose d'utile");
+----
++
+1. Ajouter `org.slf4j:slf4j-simple` comme dépendance d'exécution
+1. Vérifier le résultat dans la console pendant l'exécution
+
+[TIP]
+====
+Les versions de l'API et de l'implémentation doivent être les mêmes. Pour cela, il est conseillé d'utiliser la balise `properties` du POM.
+====
+
+
+
